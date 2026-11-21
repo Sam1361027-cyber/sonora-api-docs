@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sonora API · 開発者ドキュメント</title><link rel="stylesheet" href="style.css"><link rel="alternate" hreflang="en" href="index.html"></head>
+<body><a class="skip" href="#main">本文へ</a><header><div><strong>Sonora API</strong><a lang="en" href="index.html">English</a></div></header><div class="layout"><nav aria-label="目次"><a href="#install">導入</a><a href="#play">再生と同期</a><a href="#reference">API リファレンス</a><a href="#example">サンプルコード</a><a href="#terms">利用条件</a></nav><main id="main"><small>Sonora API 1.0.0 · Minecraft 1.21.1 · NeoForge</small><h1>開発者ガイド</h1><p>サーバーに登録した MP3 を、音源の周囲や指定グループのプレイヤーに配信できます。参加者はクライアントに Sonora を導入すると、再生中の曲にも途中から参加できます。</p>
+<h2 id="install">導入</h2><p>Java 21、Minecraft 1.21.1、NeoForge 21.1.233 以上の 21.1 系を使用します。作者から入手した公式 JAR をサーバーとクライアントの mods に配置します。開発時は連携 MOD の libs に置き、build.gradle に次を追加します。</p><pre tabindex="0"><code>dependencies {
+    implementation files('libs/sonora-NeoForge-MC1.21.1-1.0.0.jar')
+}</code></pre><p>src/main/resources/META-INF/neoforge.mods.toml に実行時依存を追加します。gallery は連携 MOD の ID に置き換えてください。この例は対象を記載バージョンに固定します。</p><pre tabindex="0"><code>[[dependencies.gallery]]
+modId = "sonora"
+type = "required"
+versionRange = "[1.0.0]"
+ordering = "NONE"
+side = "BOTH"</code></pre>
+<h3>音源を登録する</h3><p>例で使用する theme.mp3 と bell.mp3 を、MOD ID が gallery の連携 MOD の <code>src/main/resources/data/gallery/audio_library/</code> に配置します。サーバー起動時に gallery:theme と gallery:bell として登録されます。ワールド内の audio_library/gallery/ に置く方法もあります。管理者は /audio list gallery で登録を確認できます。</p>
+<h2 id="play">再生と同期</h2><h3>ワールドに音源を置く</h3><pre tabindex="0"><code>var room = SonoraAPI.playAt(level, speaker, "gallery:theme", 4f, 32f, 0.8f);</code></pre><p>論理サーバーのスレッドで一度呼びます。ブロック中心から4ブロック以内は80%、32ブロックまで直線的に減衰します。同じディメンション内の出入りを追跡します。距離には 0 ≤ fullDistance < silentDistance を満たす有限値を指定します。戻り値を保持すると後から操作できます。</p>
+<h3>グループで同期再生する</h3><pre tabindex="0"><code>var tour = AudioLibrary.get(level.getServer()).play(trackId, List.of(guide));
+// Later, when another player joins:
+tour.addListener(visitor, ServerAudioPlayback.JoinMode.CURRENT_POSITION);</code></pre><p>同じセッションのハンドルを共有すると、途中参加者はサーバーの現在位置から聴けます。play を個別に呼ぶと別セッションになります。実際の聞こえ始めには先読み、端末、回線による差があります。</p>
+<h3>フェード・一時停止・シーク・停止</h3><pre tabindex="0"><code>room.fadeTo(0.25f, 1500);</code></pre><p>1.5秒で音量25%まで変化します。停止するタイミングで room.close() を呼んでください。直後に閉じるとフェードも打ち切られます。room.pause() と room.resume() でセッションを維持したまま一時停止・再開できます。5秒より長い曲なら room.seekTo(5000L) で5秒地点へ移動できます。</p>
+<h2 id="reference">API リファレンス</h2><p>型名を開くと完全修飾名、呼び出しシグネチャ、利用条件を確認できます。引数型は宣言順です。クライアント専用の型は連携 MOD のクライアント側から使用してください。</p><details><summary>SonoraAPI</summary><small>jp.suzuk.sonora.api.SonoraAPI</small><p>登録済みの曲 ID（文字列または ResourceLocation）とブロック位置を指定します。最後の引数は等音量距離、無音距離、基本音量の順です。サーバースレッドで ServerLevel を渡します。</p><pre tabindex="0"><code>static SonoraAPI.Playback playAt(Level, BlockPos, String, float, float, float);
+static SonoraAPI.Playback playAt(Level, BlockPos, ResourceLocation, float, float, float);</code></pre></details>
+<details><summary>SonoraAPI.Playback</summary><small>jp.suzuk.sonora.api.SonoraAPI.Playback</small><p>ハンドルをイベント間で保持します。pause と resume は状態が変化した場合に true を返します。seekTo の単位はミリ秒で、0 以上、曲の長さ未満です。範囲外は IllegalArgumentException です。close で停止します。</p><pre tabindex="0"><code>UUID id();
+boolean pause();
+boolean resume();
+boolean seekTo(long);
+void setVolume(float);
+void fadeTo(float, int);
+void close();</code></pre></details>
+<details><summary>SonoraEvents</summary><small>jp.suzuk.sonora.api.SonoraEvents</small><p>起動後のサーバースレッドで登録します。TimeCue は level、tickOfDay、dayTime を返します。指定時刻（0～23999）を順方向に通過した更新で一度通知し、睡眠にも対応します。StructureCue は level、player、structure、boundary（ENTER / EXIT）、position を返します。ロード済みチャンクを5 tick間隔で調べるため、短い通過を見逃す場合があります。MobCue は level、mob、action（ADDED / DEATH）、position を返し、ADDED は保存済み Mob の読み込みを除きます。DimensionCue は player、from、to を返します。</p><pre tabindex="0"><code>static SonoraEvents of(MinecraftServer);
+SonoraEvents.Subscription onTime(ServerLevel, int, Consumer&lt;SonoraEvents.TimeCue&gt;);
+SonoraEvents.Subscription onStructure(ServerLevel, ResourceLocation, Consumer&lt;SonoraEvents.StructureCue&gt;);
+SonoraEvents.Subscription onMob(EntityType&lt;? extends Mob&gt;, SonoraEvents.MobAction, Consumer&lt;SonoraEvents.MobCue&gt;);
+SonoraEvents.Subscription onDimensionChange(Consumer&lt;SonoraEvents.DimensionCue&gt;);</code></pre></details>
+<details><summary>SonoraEvents.Subscription</summary><small>jp.suzuk.sonora.api.SonoraEvents.Subscription</small><p>サーバースレッドで close を呼ぶと解除できます。サーバー停止時に購読は破棄されます。</p><pre tabindex="0"><code>void close();</code></pre></details>
+<details><summary>AudioLibrary</summary><small>jp.suzuk.vhaudio.AudioLibrary</small><p>サーバー単位の曲カタログです。未知の ID では info は null、source は例外を返します。TrackInfo の項目は id、durationMillis、bytes、stored です。出所は MOD_BUNDLE、WORLD_FILE、RUNTIME のいずれかです。同梱曲は読み取り専用で、二重登録は失敗します。registerPersistent の完了までは元ファイルを保持し、サーバースレッドで同期待機しないでください。delete はワールド保存曲のファイルも削除します。</p><pre tabindex="0"><code>void setPlaybackDefaults(String, PlaybackOptions);
+AudioLibrary.TrackSource source(ResourceLocation);
+AudioLibrary.TrackInfo info(ResourceLocation);
+boolean delete(ResourceLocation) throws IOException;
+static AudioLibrary get(MinecraftServer);
+Set&lt;ResourceLocation&gt; ids();
+CompletionStage&lt;ResourceLocation&gt; registerPersistent(ResourceLocation, Path);
+void register(ResourceLocation, Mp3Track);
+ServerAudioPlayback play(ResourceLocation, Collection&lt;ServerPlayer&gt;);
+ServerAudioPlayback playAt(ServerLevel, BlockPos, ResourceLocation, float, float, float);
+ServerAudioPlayback play(ResourceLocation, Collection&lt;ServerPlayer&gt;, PlaybackOptions);</code></pre></details>
+<details><summary>ServerAudioPlayback</summary><small>jp.suzuk.vhaudio.ServerAudioPlayback</small><p>CURRENT_POSITION は共有タイムラインの現在位置に参加します。FROM_START は指定プレイヤー用に別のセッションを返します。Snapshot は sessionId、namespace、任意の trackId、phase、positionMillis、durationMillis、looping、listeners を返します。phase は PREPARING、PLAYING、PAUSED、ENDED です。completion の結果は FINISHED、STOPPED、SERVER_STOPPING のいずれかで、クライアントの再生完了とは時間差があります。</p><pre tabindex="0"><code>static ServerAudioPlayback start(MinecraftServer, Mp3Track);
+String namespace();
+static ServerAudioPlayback start(MinecraftServer, Mp3Track, String, PlaybackOptions);
+UUID id();
+float volume();
+void setVolume(float);
+void fadeTo(float, int);
+ServerAudioPlayback addListener(ServerPlayer, ServerAudioPlayback.JoinMode);
+ServerAudioPlayback.Snapshot snapshot();
+static List&lt;ServerAudioPlayback.Snapshot&gt; sessions(MinecraftServer);
+CompletionStage&lt;ServerAudioPlayback.EndReason&gt; completion();
+boolean pause();
+boolean resume();
+boolean seekTo(long);
+static Optional&lt;ServerAudioPlayback&gt; find(MinecraftServer, UUID);
+void addListener(ServerPlayer);
+void removeListener(ServerPlayer);
+void close();</code></pre></details>
+<details><summary>PlaybackOptions</summary><small>jp.suzuk.vhaudio.PlaybackOptions</small><p>コンストラクタはカテゴリ、音量（0～1）、減衰関数、先読み（100～3000 ms）、遅延許容（0～10000 ms、遅れによる破棄を無効にする場合は −1）、ループの順です。DEFAULT は MUSIC、1、GLOBAL、1000、250、false です。linear はディメンション、中心座標、2つの距離（ブロック）を取ります。</p><pre tabindex="0"><code>static final ToDoubleFunction&lt;ServerPlayer&gt; GLOBAL;
+static final PlaybackOptions DEFAULT;
+PlaybackOptions(SoundSource, float, ToDoubleFunction&lt;ServerPlayer&gt;, int, int, boolean);
+static ToDoubleFunction&lt;ServerPlayer&gt; linear(ResourceKey&lt;Level&gt;, Vec3, double, double);
+SoundSource category();
+float volume();
+ToDoubleFunction&lt;ServerPlayer&gt; attenuation();
+int prebufferMillis();
+int lateToleranceMillis();
+boolean loop();</code></pre></details>
+<details><summary>Mp3Track</summary><small>jp.suzuk.vhaudio.Mp3Track</small><p>ローカル MP3 はサーバースレッド外で読み込み、結果をサーバースレッドで登録します。長さはミリ秒単位です。</p><pre tabindex="0"><code>static Mp3Track load(Path) throws IOException;
+long durationMillis();</code></pre></details>
+<details><summary>AudioPermissions</summary><small>jp.suzuk.vhaudio.AudioPermissions</small><p>名前空間単位でコマンド権限を登録します。操作は VIEW、PLAY、CONTROL、DELETE、UPLOAD です。独自ポリシーはコンソールを含む既定の判定を置き換えます。連携 MOD が直接プレイヤー要求を受ける場合は入口で権限を確認します。</p><pre tabindex="0"><code>static void register(String, BiPredicate&lt;CommandSourceStack, AudioPermissions.Action&gt;);
+static boolean allowed(CommandSourceStack, String, AudioPermissions.Action);</code></pre></details>
+<details><summary>ClientAudioUpload</summary><small>jp.suzuk.vhaudio.ClientAudioUpload</small><p>クライアント専用です。クライアントスレッドで利用者が選んだファイルと曲 ID を渡し、返されるステージで成功・失敗を処理します。サーバー側のアップロード権限が必要です。</p><pre tabindex="0"><code>static CompletionStage&lt;ResourceLocation&gt; upload(Path, ResourceLocation);</code></pre></details>
+<details><summary>ClientPlaybackEvent</summary><small>jp.suzuk.vhaudio.ClientPlaybackEvent</small><p>クライアント専用です。NeoForge.EVENT_BUS で購読します。状態は WAITING、OUTPUT_STARTED、REBUFFERING、RECOVERED、ENDED、STOPPED、FAILED です。失敗時は detail を確認します。</p><pre tabindex="0"><code>UUID session();
+ClientPlaybackEvent.State state();
+long positionMillis();
+String detail();</code></pre></details>
+<h2 id="example">サンプルコード</h2><p><a href="examples/GalleryAudio.java">GalleryAudio.java</a> · 連携 MOD から使うクラスの全体例です。各メソッドをサーバー側のハンドラーから呼びます。グループごとに1つの tour を保持し、夜の通知が不要になったら購読を close します。</p><pre tabindex="0"><code>package example.gallery;
+
+import java.util.List;
+import jp.suzuk.sonora.api.SonoraAPI;
+import jp.suzuk.sonora.api.SonoraEvents;
+import jp.suzuk.vhaudio.AudioLibrary;
+import jp.suzuk.vhaudio.ServerAudioPlayback;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+
+public final class GalleryAudio {
+    private static final ResourceLocation THEME =
+            ResourceLocation.fromNamespaceAndPath("gallery", "theme");
+
+    public static SonoraAPI.Playback openRoom(ServerLevel level, BlockPos speaker) {
+        return SonoraAPI.playAt(level, speaker, THEME, 4f, 32f, 0.8f);
+    }
+
+    public static ServerAudioPlayback startTour(ServerLevel level, ServerPlayer guide) {
+        return AudioLibrary.get(level.getServer()).play(THEME, List.of(guide));
+    }
+
+    public static void joinTour(ServerAudioPlayback tour, ServerPlayer visitor) {
+        tour.addListener(visitor, ServerAudioPlayback.JoinMode.CURRENT_POSITION);
+    }
+
+    public static void lowerVolume(SonoraAPI.Playback audio) {
+        audio.fadeTo(0.25f, 1500);
+    }
+
+    public static void stop(SonoraAPI.Playback audio) {
+        audio.close();
+    }
+
+    public static SonoraEvents.Subscription eveningBell(ServerLevel level, BlockPos bell) {
+        return SonoraEvents.of(level.getServer()).onTime(level, 13000, cue -&gt;
+                SonoraAPI.playAt(cue.level(), bell, "gallery:bell", 3f, 20f, 0.6f));
+    }
+}</code></pre>
+<h2 id="terms">利用条件</h2><p>掲載したサンプルコードと GalleryAudio.java は、商用を含むご自身の MOD で複製・改変・再配布できます。この許可の対象はサンプルコードのみです。Sonora API 本体はプロプライエタリです。公開 API の利用には作者の条件が適用され、本体の改造・再配布には権利者の許可が必要です。</p>
+<footer><a href="https://github.com/Sam1361027-cyber/sonora-api-docs">ドキュメントのリポジトリ</a></footer></main></div></body></html>

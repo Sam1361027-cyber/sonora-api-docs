@@ -26,7 +26,7 @@ It allows mod developers to integrate music playback into their own projects wit
 
 Sonora API is designed to be used as a dependency by other Minecraft mods.
 
-Detailed integration guides, API references, and example code will be added to this repository.
+[Developer documentation](https://sam1361027-cyber.github.io/sonora-api-docs/) · [日本語ガイド](https://sam1361027-cyber.github.io/sonora-api-docs/ja.html)
 
 ## Installation
 
@@ -40,7 +40,4 @@ Sonora API is proprietary software. Public API usage is permitted under the proj
 
 Unauthorized redistribution or modification of Sonora API itself is not permitted.
 
----
-
-**Sonora API — Bringing synchronized music streaming to Minecraft mods.**# sonora-api-docs
-Official documentation and developer guides for Sonora API, a Minecraft music streaming and playback library.
+You may copy, adapt and redistribute the example snippets and GalleryAudio.java in your own mods, including commercial mods. This permission covers only the examples.
