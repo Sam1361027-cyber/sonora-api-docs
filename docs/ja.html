@@ -1,15 +1,15 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sonora API · 開発者ドキュメント</title><link rel="stylesheet" href="style.css"><link rel="alternate" hreflang="en" href="index.html"></head>
-<body><a class="skip" href="#main">本文へ</a><header><div><strong>Sonora API</strong><a lang="en" href="index.html">English</a></div></header><div class="layout"><nav aria-label="目次"><a href="#install">導入</a><a href="#play">再生と同期</a><a href="#reference">API リファレンス</a><a href="#example">サンプルコード</a><a href="#terms">利用条件</a></nav><main id="main"><small>Sonora API 1.0.0 · Minecraft 1.21.1 · NeoForge</small><h1>開発者ガイド</h1><p>サーバーに登録した MP3 を、音源の周囲や指定グループのプレイヤーに配信できます。参加者はクライアントに Sonora を導入すると、再生中の曲にも途中から参加できます。</p>
+<body><a class="skip" href="#main">本文へ</a><header><div><strong>Sonora API</strong><a lang="en" href="index.html">English</a></div></header><div class="layout"><nav aria-label="目次"><a href="#install">導入</a><a href="#play">再生と同期</a><a href="#reference">API リファレンス</a><a href="#example">サンプルコード</a><a href="#terms">利用条件</a></nav><main id="main"><small>Sonora API 1.0.1 · Minecraft 1.21.1 · NeoForge</small><h1>開発者ガイド</h1><p>サーバーに登録した MP3 を、音源の周囲や指定グループのプレイヤーに配信できます。参加者はクライアントに Sonora を導入すると、再生中の曲にも途中から参加できます。</p>
 <h2 id="install">導入</h2><p>Java 21、Minecraft 1.21.1、NeoForge 21.1.233 以上の 21.1 系を使用します。作者から入手した公式 JAR をサーバーとクライアントの mods に配置します。開発時は連携 MOD の libs に置き、build.gradle に次を追加します。</p><pre tabindex="0"><code>dependencies {
-    implementation files('libs/sonora-NeoForge-MC1.21.1-1.0.0.jar')
+    implementation files('libs/sonora-NeoForge-MC1.21.1-1.0.1.jar')
 }</code></pre><p>src/main/resources/META-INF/neoforge.mods.toml に実行時依存を追加します。gallery は連携 MOD の ID に置き換えてください。この例は対象を記載バージョンに固定します。</p><pre tabindex="0"><code>[[dependencies.gallery]]
 modId = "sonora"
 type = "required"
-versionRange = "[1.0.0]"
+versionRange = "[1.0.1]"
 ordering = "NONE"
 side = "BOTH"</code></pre>
-<h3>音源を登録する</h3><p>例で使用する theme.mp3 と bell.mp3 を、MOD ID が gallery の連携 MOD の <code>src/main/resources/data/gallery/audio_library/</code> に配置します。サーバー起動時に gallery:theme と gallery:bell として登録されます。ワールド内の audio_library/gallery/ に置く方法もあります。管理者は /audio list gallery で登録を確認できます。</p>
+<p>1.0.1 のアップロードと永続登録は、1 曲 60 分ちょうど、144 MiB までです。ワールドの曲には合計 320 MiB の容量枠があります。1.0.0 のワールドは保存済みの曲と ID を引き継げます。</p><h3>音源を登録する</h3><p>例で使用する theme.mp3 と bell.mp3 を、MOD ID が gallery の連携 MOD の <code>src/main/resources/data/gallery/audio_library/</code> に配置します。サーバー起動時に gallery:theme と gallery:bell として登録されます。ワールド内の audio_library/gallery/ に置く方法もあります。管理者は /audio list gallery で登録を確認できます。</p>
 <h2 id="play">再生と同期</h2><h3>ワールドに音源を置く</h3><pre tabindex="0"><code>var room = SonoraAPI.playAt(level, speaker, "gallery:theme", 4f, 32f, 0.8f);</code></pre><p>論理サーバーのスレッドで一度呼びます。ブロック中心から4ブロック以内は80%、32ブロックまで直線的に減衰します。同じディメンション内の出入りを追跡します。距離には 0 ≤ fullDistance < silentDistance を満たす有限値を指定します。戻り値を保持すると後から操作できます。</p>
 <h3>グループで同期再生する</h3><pre tabindex="0"><code>var tour = AudioLibrary.get(level.getServer()).play(trackId, List.of(guide));
 // Later, when another player joins:
@@ -120,4 +120,4 @@ public final class GalleryAudio {
     }
 }</code></pre>
 <h2 id="terms">利用条件</h2><p>掲載したサンプルコードと GalleryAudio.java は、商用を含むご自身の MOD で複製・改変・再配布できます。この許可の対象はサンプルコードのみです。Sonora API 本体はプロプライエタリです。公開 API の利用には作者の条件が適用され、本体の改造・再配布には権利者の許可が必要です。</p>
-<footer><a href="https://github.com/Sam1361027-cyber/sonora-api-docs">ドキュメントのリポジトリ</a></footer></main></div></body></html>
+<footer><a href="https://github.com/Sam1361027-cyber/sonora-api-docs">ドキュメントのリポジトリ</a> · <a href="https://github.com/Sam1361027-cyber/sonora-api-docs/blob/main/CHANGELOG.md">更新履歴</a></footer></main></div></body></html>

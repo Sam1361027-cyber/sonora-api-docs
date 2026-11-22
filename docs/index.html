@@ -1,15 +1,15 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sonora API · Developer documentation</title><link rel="stylesheet" href="style.css"><link rel="alternate" hreflang="ja" href="ja.html"></head>
-<body><a class="skip" href="#main">Skip to content</a><header><div><strong>Sonora API</strong><a lang="ja" href="ja.html">日本語</a></div></header><div class="layout"><nav aria-label="Contents"><a href="#install">Installation</a><a href="#play">Playback</a><a href="#reference">API reference</a><a href="#example">Example code</a><a href="#terms">Usage terms</a></nav><main id="main"><small>Sonora API 1.0.0 · Minecraft 1.21.1 · NeoForge</small><h1>Developer guide</h1><p>Stream a registered MP3 from a Minecraft server to nearby players or a selected group. Players need Sonora on their client and can join a track already in progress.</p>
+<body><a class="skip" href="#main">Skip to content</a><header><div><strong>Sonora API</strong><a lang="ja" href="ja.html">日本語</a></div></header><div class="layout"><nav aria-label="Contents"><a href="#install">Installation</a><a href="#play">Playback</a><a href="#reference">API reference</a><a href="#example">Example code</a><a href="#terms">Usage terms</a></nav><main id="main"><small>Sonora API 1.0.1 · Minecraft 1.21.1 · NeoForge</small><h1>Developer guide</h1><p>Stream a registered MP3 from a Minecraft server to nearby players or a selected group. Players need Sonora on their client and can join a track already in progress.</p>
 <h2 id="install">Installation</h2><p>Use Java 21, Minecraft 1.21.1 and NeoForge 21.1.233 or later in the 21.1 series. Obtain the official Sonora JAR from its author. Install it in both the dedicated server and client mods folders. For development, place a copy in the consuming project’s libs directory and add this to build.gradle.</p><pre tabindex="0"><code>dependencies {
-    implementation files('libs/sonora-NeoForge-MC1.21.1-1.0.0.jar')
+    implementation files('libs/sonora-NeoForge-MC1.21.1-1.0.1.jar')
 }</code></pre><p>Declare the runtime dependency in src/main/resources/META-INF/neoforge.mods.toml. Replace gallery with your own mod ID. This range pins the integration to the documented version.</p><pre tabindex="0"><code>[[dependencies.gallery]]
 modId = "sonora"
 type = "required"
-versionRange = "[1.0.0]"
+versionRange = "[1.0.1]"
 ordering = "NONE"
 side = "BOTH"</code></pre>
-<h3>Register the audio</h3><p>For the examples, bundle theme.mp3 and bell.mp3 under <code>src/main/resources/data/gallery/audio_library/</code> in the mod whose ID is gallery. At server startup these become gallery:theme and gallery:bell. Alternatively put the files under audio_library/gallery/ inside the world directory. Check registration with /audio list gallery as an operator.</p>
+<p>Version 1.0.1 supports uploads and persistent imports up to and including 60 minutes and 144 MiB per track. The world catalog has a 320 MiB budget. Existing 1.0.0 worlds retain their tracks and IDs.</p><h3>Register the audio</h3><p>For the examples, bundle theme.mp3 and bell.mp3 under <code>src/main/resources/data/gallery/audio_library/</code> in the mod whose ID is gallery. At server startup these become gallery:theme and gallery:bell. Alternatively put the files under audio_library/gallery/ inside the world directory. Check registration with /audio list gallery as an operator.</p>
 <h2 id="play">Playback</h2><h3>A speaker in the world</h3><pre tabindex="0"><code>var room = SonoraAPI.playAt(level, speaker, "gallery:theme", 4f, 32f, 0.8f);</code></pre><p>Call once on the logical server thread. Volume is 80% within four blocks of the block center. It falls linearly to silence at 32 blocks. Membership follows players in the same dimension. Distances must be finite, with 0 ≤ fullDistance < silentDistance. Keep the handle to control this playback later.</p>
 <h3>One timeline for a group</h3><pre tabindex="0"><code>var tour = AudioLibrary.get(level.getServer()).play(trackId, List.of(guide));
 // Later, when another player joins:
@@ -120,4 +120,4 @@ public final class GalleryAudio {
     }
 }</code></pre>
 <h2 id="terms">Usage terms</h2><p>You may copy, adapt and redistribute the example snippets and GalleryAudio.java in your own mods, including commercial mods. This permission applies only to the examples. Sonora API itself is proprietary. Use its public API under the author’s terms. Modifying or redistributing the library requires authorization from the rights holder.</p>
-<footer><a href="https://github.com/Sam1361027-cyber/sonora-api-docs">Documentation repository</a></footer></main></div></body></html>
+<footer><a href="https://github.com/Sam1361027-cyber/sonora-api-docs">Documentation repository</a> · <a href="https://github.com/Sam1361027-cyber/sonora-api-docs/blob/main/CHANGELOG.md">Release notes</a></footer></main></div></body></html>
